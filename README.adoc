@@ -38,19 +38,38 @@ First upload template that would deploy datagrid
 $ oc project openshift
 $ oc create -f templates/datagrid72-basic.json
 $ oc new-project jdg
-$ oc new-app --template=datagrid72-basic --name=rhdg -e CACHE_NAMES=mycache -e MYCACHE_CACHE_START=EAGER -e USERNAME=user1 -e PASSWORD=welcome1 -e ADMIN_GROUP=customrole -e CONTAINER_SECURITY_ROLES="customrole=READ WRITE" -e HOTROD_AUTHENTICATION="true" -e MYCACHE_CACHE_SECURITY_AUTHORIZATION_ENABLED="true" -e MYCACHE_CACHE_SECURITY_AUTHORIZATION_ROLES="customrole" -e HOTROD_SERVICE_NAME=datagrid-app-hotrod 
+$ oc new-app --template=datagrid72-basic --name=rhdg \
+            -e CACHE_NAMES=mycache \
+            -e MYCACHE_CACHE_START=EAGER \
+            -e USERNAME=user1 \
+            -e PASSWORD=welcome1 \
+            -e ADMIN_GROUP=customrole \
+            -e CONTAINER_SECURITY_ROLES="customrole=READ WRITE" \
+            -e HOTROD_AUTHENTICATION="true" \
+            -e MYCACHE_CACHE_SECURITY_AUTHORIZATION_ENABLED="true" \
+            -e MYCACHE_CACHE_SECURITY_AUTHORIZATION_ROLES="customrole" \
+            -e HOTROD_SERVICE_NAME=datagrid-app-hotrod \
+            -e REST_SECURITY_DOMAIN=jdg-openshift
+
 ----
 
 Following parameters are passed in the above command
 
-CACHE_NAMES = This will create "mycache" in JDG
-USERNAME = To access JDG, username needs to be provided
-ADMIN_GRPUP = We create a new role, customrole, that we would assign privileges to
-CONTAINER_SECURITY_ROLES = Here, we assign READ and WRITE privilege to customrole
-HOTROD_AUTHENTICATION = Sets to true
-MYCACHE_CACHE_SECURITY_AUTHORIZATION_ENABLED = This parameter (parameter starts with cache name, mycache, in CAPS) sets that authorization needs to be followed for mycache
-MYCACHE_CACHE_SECURITY_AUTHORIZATION_ROLES = We assign customrole to MYCACHE cache
-HOTROD_SERVICE_NAME = This maps to the service name that Openshift assigns when we deploy the template
+*CACHE_NAMES* = This will create "mycache" in JDG
+
+*USERNAME* = To access JDG, username needs to be provided
+
+*ADMIN_GROUP* = We create a new role, customrole, that we would assign privileges to
+
+*CONTAINER_SECURITY_ROLES* = Here, we assign READ and WRITE privilege to customrole
+
+*HOTROD_AUTHENTICATION* = Sets to true
+
+*MYCACHE_CACHE_SECURITY_AUTHORIZATION_ENABLED* = This parameter (parameter starts with cache name, mycache, in CAPS) sets that authorization needs to be followed for mycache
+
+*MYCACHE_CACHE_SECURITY_AUTHORIZATION_ROLES* = We assign customrole to MYCACHE cache
+
+*HOTROD_SERVICE_NAME* = This maps to the service name that Openshift assigns when we deploy the template
 
 Now, check that user1 has been assigned customrole.
 
@@ -79,8 +98,10 @@ user1=customrole
 ==== Step 3: Deploy Hotrod Client
 
 We will now deploy client application (SpringBoot) which will access JDG in secure mode. Have a look at following two files
-a. HotrodController.java - This file exposes all urls
-b. HotrodService.java - This file initialize cache. Have a look at this file to understand how we are passing necessary parameters (like username, password, jdg service name, jdg service port) to the client to authenticate/authorize JDG.
+1. HotrodController.java - This file exposes all urls
+
+2. HotrodService.java - This file initialize cache. Have a look at this file to understand how we are passing necessary parameters (like username, password, jdg service name, jdg service port) to the client to authenticate/authorize JDG.
+
 
 ----
 $ cd hotrod
