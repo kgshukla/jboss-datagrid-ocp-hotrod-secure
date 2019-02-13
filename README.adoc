@@ -2,10 +2,12 @@
 
 === Introduction
 
-This demo aims to provide starting point/code-sample to configure and run Datagrid on Openshift with hotroda and authorization/authentication on
+This demo aims to provide starting point/code-sample to configure and run Datagrid on Openshift with hotrod and authorization/authentication on
 
 1. minishift v1.25.0+90fb23e
 2. Openshift version v3.11.0
+3. JBoss Datagrid Container Image 7.2
+4. mvn 3.5.4
 
 === Run Demo
 ==== Step 1: Install minishift
@@ -71,6 +73,10 @@ Following parameters are passed in the above command
 
 *HOTROD_SERVICE_NAME* = This maps to the service name that Openshift assigns when we deploy the template
 
+For more information on setting environment variables, refer to this link for 7.2 version
+
+https://access.redhat.com/documentation/en-us/red_hat_data_grid/7.2/html/data_grid_for_openshift/os-env-vars#env-var-cache
+
 Now, check that user1 has been assigned customrole.
 
 ----
@@ -123,7 +129,7 @@ hotrod         hotrod-jdg.192.168.99.100.nip.io                   hotrod        
 
 $ curl -i hotrod-jdg.192.168.99.100.nip.io/put/10
 
-## you should receive "success" mesg if all goes well
+## you should receive "Successfully Inserted!" mesg if all goes well
 
 $ curl -i hotrod-jdg.192.168.99.100.nip.io/get/10
 
