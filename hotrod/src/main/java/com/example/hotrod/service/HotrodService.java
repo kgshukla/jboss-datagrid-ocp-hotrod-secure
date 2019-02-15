@@ -36,64 +36,33 @@ public class HotrodService {
 	private static final String DEFAULT_SSL_PROTOCOL = "TLSv1.2";
 	private static final String DEFAULT_KEYSTORE_TYPE = "JKS";
 	
-	static{
-	    javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(
-	    new javax.net.ssl.HostnameVerifier(){
+  public RemoteCacheManager getCacheManager() {
 
-	        public boolean verify(String hostname,
-	                javax.net.ssl.SSLSession sslSession ) {
-	            return true ;
-	        }
-	    });
-	}
-	
-	public RemoteCacheManager getCacheManager() {
-		
-		
-	SSLContext sslCtx = SslContextFactory.getContext(
-			"/etc/datagrid-secret-volume/..data/jdg-https.jks" ,
-			DEFAULT_KEYSTORE_TYPE,
-			keystore_password.toCharArray(), 
-			null, 
-			keystore_alias, 
-			"/etc/datagrid-secret-volume/..data/jdg-https.jks",
-			DEFAULT_KEYSTORE_TYPE,
-			keystore_password.toCharArray(),
-			DEFAULT_SSL_PROTOCOL,
-			null);	
-		
-		
+    SSLContext sslCtx = SslContextFactory.getContext(
+        "/etc/datagrid-secret-volume/jdg-https.jks" ,
+        DEFAULT_KEYSTORE_TYPE,
+        keystore_password.toCharArray(), 
+        null, 
+        keystore_alias, 
+        "/etc/datagrid-secret-volume//jdg-https.jks",
+        DEFAULT_KEYSTORE_TYPE,
+        keystore_password.toCharArray(),
+        DEFAULT_SSL_PROTOCOL,
+        null);	
 
-    
-		ConfigurationBuilder config = new ConfigurationBuilder();
-        config.addServers(hotrodhost.concat(":").concat(hotrodport))
-                .marshaller(new GenericJBossMarshaller())
-                .security()
-                /*
-                .authentication()
-                .serverName(servername) //define server name, should be specified in XML configuration
-                .saslMechanism("DIGEST-MD5") // define SASL mechanism, in this example we use DIGEST with   MD5 hash
-                .username(username)
-                .password(password)
-                */
-                .ssl()
-                .sslContext(sslCtx)
-                .enable()
-                .authentication()
-                .serverName(servername) //define server name, should be specified in XML configuration
-                .saslMechanism("DIGEST-MD5") // define SASL mechanism, in this example we use DIGEST with   MD5 hash
-                .username(username)
-                .password(password);
-//                  .enable()
-//                  .keyAlias("selfsigned")
-//                  .trustStoreFileName(tccl.getResource("jdg-https.jks").getPath())
-//                  .trustStorePassword("changeit".toCharArray())
-//                  .keyStoreFileName(tccl.getResource("jdg-https.jks").getPath())
-//                  .keyStorePassword("changeit".toCharArray());
+    ConfigurationBuilder config = new ConfigurationBuilder();
+    config.addServers(hotrodhost.concat(":").concat(hotrodport))
+      .marshaller(new GenericJBossMarshaller())
+      .security()
+      .ssl()
+      .sslContext(sslCtx)
+      .enable()
+      .authentication()
+      .serverName(servername) //define server name, should be specified in XML configuration
+      .saslMechanism("DIGEST-MD5") // define SASL mechanism, in this example we use DIGEST with   MD5 hash
+      .username(username)
+      .password(password);
 
-                //.callbackHandler(new LoginHandler(username, password.toCharArray(), REALM)) // define login handler, implem  entation defined
-                //.enable();
-
-        return new RemoteCacheManager(config.build());
-	}
+    return new RemoteCacheManager(config.build());
+  }
 }
