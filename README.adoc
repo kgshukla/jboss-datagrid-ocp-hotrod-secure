@@ -2,7 +2,7 @@
 
 === Introduction
 
-This demo aims to provide starting point/code-sample to configure and run Datagrid on Openshift with hotrod and authorization/authentication on
+This demo aims to provide starting point/code-sample to configure and run Datagrid on Openshift with hotrod enabled, authorization/authentication on cache, client to datagrid encryption and datagrid-to-datagrid node encryption.
 
 1. minishift v1.25.0+90fb23e
 2. Openshift version v3.11.0
