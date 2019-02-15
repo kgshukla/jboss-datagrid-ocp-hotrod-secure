@@ -1,0 +1,14 @@
+spec:
+  template:
+    spec:
+      containers:
+      - env:
+        volumeMounts:
+          - mountPath: /etc/datagrid-secret-volume
+            name: datagrid-keystore-volume
+            readOnly: true
+      volumes:
+        - name: datagrid-keystore-volume
+          secret:
+            defaultMode: 420
+            secretName: datagrid-app-secret

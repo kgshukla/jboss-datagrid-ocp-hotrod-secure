@@ -33,25 +33,83 @@ $ oc describe is/datagrid72-openshift
 ----
 last command should show you three tags
 
-==== Step 2: Deploy datagrid
+==== Step 2: Create keystore
+
+We need to create keystores holding self-sigend certificates. One for encrypting the client to datagrid communication and other for encrypting one jdg node to another jdg node communication.
+
+Let's first create client to datagrid keystore named jdg-https.jks. There will be some questions asked, please enter the same ones as you see below
+
+----
+$ keytool -genkey -keyalg RSA -alias selfsigned -keystore jdg-https.jks -storepass changeit -validity 360 -keysize 2048
+
+What is your first and last name?
+  [Unknown]:  selfsigned
+What is the name of your organizational unit?
+  [Unknown]:  SG
+What is the name of your organization?
+  [Unknown]:  SG
+What is the name of your City or Locality?
+  [Unknown]:  SG
+What is the name of your State or Province?
+  [Unknown]:  SG
+What is the two-letter country code for this unit?
+  [Unknown]:  SG
+Is CN=selfsigned, OU=SG, O=SG, L=SG, ST=SG, C=SG correct?
+  [no]:  yes
+
+Enter key password for <selfsigned>
+  (RETURN if same as keystore password):  
+
+Warning:
+The JKS keystore uses a proprietary format. It is recommended to migrate to PKCS12 which is an industry standard format using "keytool -importkeystore -srckeystore jdg-https.jks -destkeystore jdg-https.jks -deststoretype pkcs12".
+----
+
+let's create jdg node to node keystore named jgroups.jceks
+
+----
+$ keytool -genseckey -alias selfsigned -keypass changeit -storepass changeit -keyalg Blowfish -keysize 56 -keystore jgroups.jceks -storetype JCEKS
+
+Warning:
+The JCEKS keystore uses a proprietary format. It is recommended to migrate to PKCS12 which is an industry standard format using "keytool -importkeystore -srckeystore jgroups.jceks -destkeystore jgroups.jceks -deststoretype pkcs12".
+----
+
+Create a secret now named datagrid-app-secret that would hold contents of both the keystores created above. The secret would be mounted to jdg deployment later on. 
+
+----
+$ oc create secret generic datagrid-app-secret --from-file=jdg-https.jks --from-file=jgroups.jceks
+$ oc secrets link default datagrid-app-secret
+----
+
+==== Step 3: Deploy datagrid
 
 First upload template that would deploy datagrid
 ----
 $ oc project openshift
-$ oc create -f templates/datagrid72-basic.json
+$ oc create -f templates/datagrid72-https.json
 $ oc new-project jdg
-$ oc new-app --template=datagrid72-basic --name=rhdg \
-            -e CACHE_NAMES=mycache \
-            -e MYCACHE_CACHE_START=EAGER \
-            -e USERNAME=user1 \
-            -e PASSWORD=welcome1 \
-            -e ADMIN_GROUP=customrole \
-            -e CONTAINER_SECURITY_ROLES="customrole=READ WRITE" \
-            -e HOTROD_AUTHENTICATION="true" \
-            -e MYCACHE_CACHE_SECURITY_AUTHORIZATION_ENABLED="true" \
-            -e MYCACHE_CACHE_SECURITY_AUTHORIZATION_ROLES="customrole" \
-            -e HOTROD_SERVICE_NAME=datagrid-app-hotrod \
-            -e REST_SECURITY_DOMAIN=jdg-openshift
+$ oc create secret generic datagrid-app-secret --from-file=jdg-https.jks --from-file=jgroups.jceks
+$ oc secrets link default datagrid-app-secret
+$ oc new-app --template=datagrid72-https --name=rhdg  \
+   -e CACHE_NAMES=mycache \
+   -e MYCACHE_CACHE_START=EAGER \
+   -e USERNAME=user1 \
+   -e PASSWORD=welcome1 \
+   -e ADMIN_GROUP=customrole \
+   -e CONTAINER_SECURITY_ROLES="customrole=READ WRITE" \
+   -e MYCACHE_CACHE_SECURITY_AUTHORIZATION_ENABLED="true" \
+   -e MYCACHE_CACHE_SECURITY_AUTHORIZATION_ROLES="customrole" \
+   -e REST_SECURITY_DOMAIN=jdg-openshift \
+   -e HOTROD_AUTHENTICATION="true" \
+   -e HOTROD_ENCRYPTION="true" \
+   -e HOTROD_SERVICE_NAME=datagrid-app-hotrod \
+   -e HTTPS_NAME=selfsigned \
+   -e HTTPS_SECRET=datagrid-app-secret \
+   -e HTTPS_KEYSTORE=jdg-https.jks \
+   -e HTTPS_PASSWORD=changeit \
+   -e JGROUPS_ENCRYPT_NAME=selfsigned \
+   -e JGROUPS_ENCRYPT_SECRET=datagrid-app-secret \
+   -e JGROUPS_ENCRYPT_KEYSTORE=jgroups.jceks \
+   -e JGROUPS_ENCRYPT_PASSWORD=changeit
 
 ----
 
@@ -59,19 +117,31 @@ Following parameters are passed in the above command
 
 *CACHE_NAMES* = This will create "mycache" in JDG
 
-*USERNAME* = To access JDG, username needs to be provided
+*USERNAME*/*PASSWORD* = To access JDG, username/password needs to be provided
 
 *ADMIN_GROUP* = We create a new role, customrole, that we would assign privileges to
 
 *CONTAINER_SECURITY_ROLES* = Here, we assign READ and WRITE privilege to customrole
 
-*HOTROD_AUTHENTICATION* = Sets to true
-
 *MYCACHE_CACHE_SECURITY_AUTHORIZATION_ENABLED* = This parameter (parameter starts with cache name, mycache, in CAPS) sets that authorization needs to be followed for mycache
 
 *MYCACHE_CACHE_SECURITY_AUTHORIZATION_ROLES* = We assign customrole to MYCACHE cache
 
+*HOTROD_AUTHENTICATION* = Sets to true
+
+*HOTROD_ENCRYPTION* = Sets to true
+
 *HOTROD_SERVICE_NAME* = This maps to the service name that Openshift assigns when we deploy the template
+
+*HTTPS_NAME* = should match the "alias" we have set while creating keystore for client to server communication
+
+*HTTPS_PASSWORD*/*JGROUPS_ENCRYPT_PASSWOR* = should match the storepass we have set while creating keystore for client to server communication
+
+*HTTPS_SECRET*/*JGROUPS_ENCRYPT_SECRET* = should match the secret we have created in Step 2 above
+
+*HTTPS_KEYSTORE*/*JGROUPS_ENCRYPT_KEYSTORE* = specifies which keystore should be refered to in the HTTPS_SECRET/JGROUPS_ENCRYPT_SECRET
+
+*JGROUPS_ENCRYPT_NAME* = should match "alias" when we created the keystore for node to node communication
 
 For more information on setting environment variables, refer to this link for 7.2 version
 
@@ -106,8 +176,16 @@ user1=customrole
 We will now deploy client application (SpringBoot) which will access JDG in secure mode. Have a look at following two files
 1. HotrodController.java - This file exposes all urls
 
-2. HotrodService.java - This file initialize cache. Have a look at this file to understand how we are passing necessary parameters (like username, password, jdg service name, jdg service port) to the client to authenticate/authorize JDG.
+2. HotrodService.java - This file initialize cache. Have a look at this file to understand how we are passing necessary parameters (like cache_username, cache_password, jdg service name, jdg service port) to the client to authenticate/authorize JDG and how we are create SSLContext to encrypt the traffic between client and jdg server
 
+
+Create secret first that would hold secret infromation (like cache_user, cache_password, keystore_user etc .. )
+
+----
+$ oc create secret generic client-secret --from-literal=cache_username=user1 --from-literal=cache_passwd=welcome1 --from-literal=keystore_password=changeit --from-literal=keystore_alias=selfsigned --from-literal=keystore_path=/etc/datagrid-secret-volume/jdg-https.jks
+----
+
+Now deploy the client
 
 ----
 $ cd hotrod
@@ -115,6 +193,8 @@ $ mvn clean fabric8:deploy -DskipTests
 
 # This command will compile the package and deploy the application into openshift. Wait for command to complete
 
+# link client-secret to deployment config (you could have done as one step)
+$  oc set env --from=secret/client-secret dc/hotrod
 ----
 
 ==== Step 4: Access Hotrod Client
@@ -123,10 +203,11 @@ Insert and retrieve data in JDG using hotrod client
 
 ----
 $ oc get routes
-NAME           HOST/PORT                                PATH      SERVICES       PORT      TERMINATION   WILDCARD
-datagrid-app   datagrid-app-jdg.192.168.99.100.nip.io             datagrid-app   <all>                   None
-hotrod         hotrod-jdg.192.168.99.100.nip.io                   hotrod         8080                    None
+datagrid-app          datagrid-app-jdg.192.168.99.100.nip.io                    datagrid-app          <all>                   None
+hotrod                hotrod-jdg.192.168.99.100.nip.io                          hotrod                8080                    None
+secure-datagrid-app   secure-datagrid-app-jdg.192.168.99.100.nip.io             secure-datagrid-app   <all>     passthrough   None
 
+## Let's post some data
 $ curl -i hotrod-jdg.192.168.99.100.nip.io/put/10
 
 ## you should receive "Successfully Inserted!" mesg if all goes well
